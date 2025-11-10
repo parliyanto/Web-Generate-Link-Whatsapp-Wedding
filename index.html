@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generate WhatsApp Invitation</title>
   <style>
-    /* Styling remains the same */
     body {
       font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       height: 100vh;
       background-color: #f0f8ff;
       margin: 0;
+      padding-top: 30px;
     }
     .container {
       background: white;
@@ -21,7 +21,7 @@
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
     }
     h1 {
       text-align: center;
@@ -32,13 +32,18 @@
       margin-bottom: 6px;
       display: block;
     }
-    input, select, button {
+    input, select, textarea, button {
       width: 100%;
       padding: 12px;
       margin-bottom: 15px;
       font-size: 16px;
       border-radius: 4px;
       border: 1px solid #ccc;
+    }
+    input:disabled, select:disabled {
+      background-color: #e9ecef;
+      cursor: not-allowed;
+      color: #777;
     }
     button {
       background-color: #25D366;
@@ -50,13 +55,25 @@
     button:hover {
       background-color: #128C7E;
     }
-    .output {
+    .delete-button {
+      background-color: #dc3545;
+      width: auto;
+      padding: 8px 14px;
+      margin-top: 5px;
+      font-size: 14px;
+      float: right;
+    }
+    .delete-button:hover {
+      background-color: #b02a37;
+    }
+    .output, .preview {
       margin-top: 20px;
       padding: 10px;
       background-color: #f7f7f7;
       border-radius: 6px;
       font-size: 14px;
       color: #333;
+      white-space: pre-line;
     }
     .link {
       color: #0078ff;
@@ -75,6 +92,42 @@
     .log-table th {
       background-color: #f0f0f0;
     }
+    #confirmButton {
+      display: none;
+      background-color: #007bff;
+    }
+    #confirmButton:hover {
+      background-color: #0056b3;
+    }
+    #clearPreviewButton {
+      display: none;
+      background-color: #dc3545;
+    }
+    #clearPreviewButton:hover {
+      background-color: #b02a37;
+    }
+    .action-btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-right: 4px;
+    }
+    .action-btn:hover {
+      background-color: #0056b3;
+    }
+    .message-preview-box {
+      display: none;
+      margin-top: 15px;
+      padding: 12px;
+      background-color: #f7f7f7;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      white-space: pre-line;
+    }
   </style>
 </head>
 <body>
@@ -85,7 +138,7 @@
     <label for="guestName">Nama Tamu:</label>
     <input type="text" id="guestName" placeholder="Masukkan nama tamu" />
 
-    <label for="phoneNumber">Nomor WhatsApp (tanpa + atau spasi):</label>
+    <label for="phoneNumber">Nomor WhatsApp (diawali pakai 62):</label>
     <input type="text" id="phoneNumber" placeholder="Masukkan nomor tujuan" />
 
     <label for="isPartner">Apakah datang bersama pasangan?</label>
@@ -96,128 +149,202 @@
 
     <label for="customLink">URL Undangan (Opsional):</label>
     <input type="text" id="customLink" placeholder="Masukkan link custom atau biarkan kosong" />
-    
-    
-    <button id="generateButton">Generate Link & Pesan</button>
 
-    <div class="output" id="output">
+    <label for="customMessage">Teks Undangan (opsional, gunakan {{guest_name}}, {{link}}, {{partner_text}}):</label>
+    <textarea id="customMessage" rows="7" placeholder="Kosongkan untuk menggunakan teks default"></textarea>
+
+    <button id="previewButton">Preview Pesan</button>
+    <button id="confirmButton">Konfirmasi & Generate Link</button>
+    <button id="clearPreviewButton">Clear Preview</button>
+
+    <div class="preview" id="previewBox" style="display:none;"></div>
+
+    <div class="output" id="output" style="display:none;">
       <p>Link WhatsApp yang bisa dibagikan:</p>
       <a id="whatsAppLink" href="#" class="link" target="_blank">Klik di sini untuk membuka WhatsApp</a>
     </div>
 
-    <!-- Tabel untuk menampilkan log -->
-    <h2>Log Undangan WhatsApp</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0;">Log Undangan WhatsApp</h2>
+      <button id="deleteLogsButton" class="delete-button">🗑 Hapus Semua Log</button>
+    </div>
+    
     <table class="log-table" id="logTable">
       <thead>
         <tr>
           <th>Nama Tamu</th>
           <th>Nomor WhatsApp</th>
           <th>Pasangan</th>
-          <th>Link</th>
+          <th>Aksi</th>
         </tr>
       </thead>
-      <tbody id="logBody">
-        <!-- Data log akan ditampilkan di sini -->
-      </tbody>
+      <tbody id="logBody"></tbody>
     </table>
+
+    <div id="messagePreviewBox" class="message-preview-box"></div>
   </div>
 
   <script type="module">
-  // Mengimpor Supabase SDK dari CDN
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabaseUrl = 'https://njdnhhbjdhtqaylhrxzv.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qZG5oaGJqZGh0cWF5bGhyeHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3NjM5NzMsImV4cCI6MjA3NjMzOTk3M30.PnlGDPgr7fCEmEDJrYac9mLM5_9GkRJp_6nxQ4C61tU';
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Ganti dengan URL Supabase dan anon key kamu
-  const supabaseUrl = 'https://njdnhhbjdhtqaylhrxzv.supabase.co';  // Ganti dengan URL Supabase kamu
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qZG5oaGJqZGh0cWF5bGhyeHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3NjM5NzMsImV4cCI6MjA3NjMzOTk3M30.PnlGDPgr7fCEmEDJrYac9mLM5_9GkRJp_6nxQ4C61tU'; // Ganti dengan anon key Supabase-mu // Ganti dengan anon key Supabase kamu
-  const supabase = createClient(supabaseUrl, supabaseKey);
+    let currentData = {};
 
-  // Fungsi untuk menghasilkan link WhatsApp dan pesan
-  async function generateLink() {
-    const guestName = document.getElementById('guestName').value.trim();
-    const phoneNumber = document.getElementById('phoneNumber').value.trim();
-    const isPartner = document.getElementById('isPartner').value === "true"; // Menangani pilihan partner
-    const customLink = document.getElementById('customLink').value.trim() || 'https://weddingbridepakarif.vercel.app'; // Gunakan link default jika kosong
+    // 🔹 Toggle disable field saat custom message diisi
+    const customMsgField = document.getElementById('customMessage');
+    customMsgField.addEventListener('input', () => {
+      const isCustomFilled = customMsgField.value.trim() !== "";
+      const inputs = ['guestName', 'phoneNumber', 'isPartner', 'customLink'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        el.disabled = isCustomFilled;
+      });
+    });
 
-    // Validasi input
-    if (!guestName || !phoneNumber) {
-      alert("Mohon masukkan nama tamu dan nomor tujuan.");
-      return;
+    function decodeMessageFromLink(link) {
+      const textParam = link.split('?text=')[1];
+      if (!textParam) return "(Tidak ada pesan tersimpan)";
+      return decodeURIComponent(textParam);
     }
 
-    // Format nama tamu dan pasangan
-    const formattedName = guestName.split(" ")
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+    // 🔹 Preview Pesan
+    function previewMessage() {
+      const guestName = document.getElementById('guestName').value.trim();
+      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      const isPartner = document.getElementById('isPartner').value === "true";
+      const customLink = document.getElementById('customLink').value.trim() || 'https://weddingbridepakarif.vercel.app';
+      const customMessage = document.getElementById('customMessage').value.trim();
 
-    const displayName = isPartner ? `${formattedName} & Partner` : formattedName;
+      if (customMessage === "" && (!guestName || !phoneNumber)) {
+        alert("Mohon masukkan nama tamu dan nomor tujuan.");
+        return;
+      }
 
-    // Template pesan untuk WhatsApp
-    const message = `Kepada Yth.\nBapak/Ibu/Saudara/i\n${displayName}\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i, teman sekaligus sahabat, untuk menghadiri acara pernikahan kami.\n\nBerikut link undangan kami, untuk info lengkap dari acara, bisa kunjungi :\n\n${customLink}?guest_name=${encodeURIComponent(displayName)}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima Kasih\n\nHormat kami,\nAsri & Arief`;
+      const safeGuestName = guestName || "Tamu Spesial";
+      const safePhoneNumber = phoneNumber || "000000000000";
 
-    // Membuat URL WhatsApp dengan parameter
-    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+      const formattedName = safeGuestName.split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
 
-    // Menampilkan link WhatsApp di halaman
-    const linkElement = document.getElementById('whatsAppLink');
-    linkElement.href = whatsappURL;
-    linkElement.textContent = 'Klik di sini untuk membuka WhatsApp';
+      const displayName = isPartner ? `${formattedName} & Partner` : formattedName;
+      const partnerText = isPartner ? 'Bapak/Ibu/Saudara/i berdua' : 'Bapak/Ibu/Saudara/i';
+      const fullLink = `${customLink}?guest_name=${encodeURIComponent(displayName)}`;
 
-    // Menambahkan data log ke Supabase
-    const { data, error } = await supabase
-      .from('whatsapp_invites')  // Pastikan sudah membuat table 'whatsapp_invites' di Supabase
-      .insert([
-        { guest_name: displayName, phone_number: phoneNumber, partner: isPartner, message_link: whatsappURL }
-      ]);
+      let message = `Kepada Yth.\nBapak/Ibu/Saudara/i\n${displayName}\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText} untuk menghadiri acara pernikahan kami.\n\nBerikut link undangan kami:\n${fullLink}\n\nMerupakan suatu kebahagiaan bagi kami apabila ${partnerText} berkenan hadir dan memberikan doa restu.\n\nTerima kasih,\nHormat kami,\nAsri & Arief`;
 
-    if (error) {
-      console.error("Error inserting data: ", error);
-    } else {
-      console.log("Data log berhasil disimpan ke Supabase:", data);
-      // Update tabel log di website setelah data berhasil disimpan
+      if (customMessage !== "") {
+        message = customMessage
+          .replaceAll('{{guest_name}}', displayName)
+          .replaceAll('{{link}}', fullLink)
+          .replaceAll('{{partner_text}}', partnerText);
+      }
+
+      const whatsappURL = `https://wa.me/${safePhoneNumber}?text=${encodeURIComponent(message)}`;
+
+      currentData = { displayName, phoneNumber: safePhoneNumber, isPartner, whatsappURL, message };
+
+      const previewBox = document.getElementById('previewBox');
+      previewBox.textContent = message;
+      previewBox.style.display = "block";
+
+      document.getElementById('confirmButton').style.display = "block";
+      document.getElementById('clearPreviewButton').style.display = "block";
+    }
+
+    // 🔹 Clear Preview
+    function clearPreview() {
+      document.getElementById('previewBox').style.display = "none";
+      document.getElementById('confirmButton').style.display = "none";
+      document.getElementById('clearPreviewButton').style.display = "none";
+      currentData = {};
+    }
+
+    // 🔹 Generate Link
+    async function confirmGenerate() {
+      const { displayName, phoneNumber, isPartner, whatsappURL } = currentData;
+
+      const { error } = await supabase
+        .from('whatsapp_invites')
+        .insert([{ guest_name: displayName, phone_number: phoneNumber, partner: isPartner, message_link: whatsappURL }]);
+
+      if (error) console.error(error);
+
+      const linkElement = document.getElementById('whatsAppLink');
+      linkElement.href = whatsappURL;
+      linkElement.textContent = 'Klik di sini untuk membuka WhatsApp';
+      document.getElementById('output').style.display = "block";
+
+      alert("✅ Link WhatsApp berhasil dibuat!");
+      clearPreview();
       updateLogTable();
     }
 
-    // Menambahkan alert setelah link berhasil dibuat
-    alert("Link WhatsApp berhasil dibuat! Silakan klik untuk membagikan undangan.");
-  }
+    // 🔹 Update Tabel Log
+    async function updateLogTable() {
+      const { data, error } = await supabase
+        .from('whatsapp_invites')
+        .select('*')
+        .order('id', { ascending: false });
 
-  // Fungsi untuk memperbarui log dari Supabase
-  async function updateLogTable() {
-    const { data, error } = await supabase
-      .from('whatsapp_invites')  // Mengambil data log dari Supabase
-      .select('*')
-      .order('id', { ascending: false });
+      if (error) return console.error(error);
 
-    if (error) {
-      console.error("Error fetching data: ", error);
-      return;
+      const logTableBody = document.getElementById('logBody');
+      logTableBody.innerHTML = '';
+
+      if (!data.length) {
+        logTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Belum ada log undangan.</td></tr>`;
+        return;
+      }
+
+      data.forEach(log => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${log.guest_name}</td>
+          <td>${log.phone_number}</td>
+          <td>${log.partner ? 'Ya' : 'Tidak'}</td>
+          <td>
+            <button class="action-btn preview-btn" data-link="${log.message_link}">👁 Preview</button>
+            <a href="${log.message_link}" target="_blank" class="action-btn" style="background:#25D366;">📤 WhatsApp</a>
+          </td>`;
+        logTableBody.appendChild(row);
+      });
+
+      // Tambahkan event listener setelah render
+      document.querySelectorAll('.preview-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const link = e.target.getAttribute('data-link');
+          previewLogMessage(link);
+        });
+      });
     }
 
-    const logTableBody = document.getElementById('logBody');
-    logTableBody.innerHTML = ''; // Clear existing rows
+    // 🔹 Preview Pesan dari Log
+    function previewLogMessage(link) {
+      const msgBox = document.getElementById('messagePreviewBox');
+      msgBox.innerHTML = decodeMessageFromLink(link) +
+        `<br><br><button class="action-btn" onclick="document.getElementById('messagePreviewBox').style.display='none'">Tutup Preview</button>`;
+      msgBox.style.display = 'block';
+    }
 
-    // Menampilkan setiap baris log di tabel
-    data.forEach(log => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${log.guest_name}</td>
-        <td>${log.phone_number}</td>
-        <td>${log.partner ? 'Ya' : 'Tidak'}</td>
-        <td><a href="${log.message_link}" target="_blank">Lihat Link</a></td>
-      `;
-      logTableBody.appendChild(row);
-    });
-  }
+    // 🔹 Hapus Semua Log
+    async function deleteAllLogs() {
+      if (!confirm("⚠️ Yakin ingin menghapus semua log undangan?")) return;
+      const { error } = await supabase.from('whatsapp_invites').delete().neq('id', 0);
+      if (error) return alert("❌ Gagal menghapus log: " + error.message);
+      alert("🗑 Semua log berhasil dihapus!");
+      updateLogTable();
+    }
 
-  // Event listener untuk tombol generate
-  document.getElementById('generateButton').addEventListener('click', function(event) {
-    generateLink();
-  });
+    // 🔹 Event Listeners
+    document.getElementById('previewButton').addEventListener('click', previewMessage);
+    document.getElementById('confirmButton').addEventListener('click', confirmGenerate);
+    document.getElementById('clearPreviewButton').addEventListener('click', clearPreview);
+    document.getElementById('deleteLogsButton').addEventListener('click', deleteAllLogs);
 
-  // Memperbarui tabel log saat halaman pertama kali dimuat
-  window.onload = updateLogTable;
-</script>
-
-  
+    window.onload = updateLogTable;
+  </script>
 </body>
 </html>
