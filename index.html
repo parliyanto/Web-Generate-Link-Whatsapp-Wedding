@@ -152,12 +152,16 @@ function previewMessage() {
   const customLink = document.getElementById('customLink').value.trim() || defaultLink;
   const customMessage = document.getElementById('customMessage').value.trim();
 
-  if (!guestName || !phoneNumber) {
+  // 🧠 Kalau tidak pakai custom message → wajib isi nama & nomor
+  if (customMessage === "" && (!guestName || !phoneNumber)) {
     alert('❌ Mohon masukkan nama tamu dan nomor WhatsApp.');
     return;
   }
 
-  const formattedName = guestName
+  // kalau custom message, isi default kalau field kosong
+  const finalGuestName = guestName || "{{guest_name}}";
+  const finalPhoneNumber = phoneNumber || "0000000000000"; // dummy biar ga error
+  const formattedName = finalGuestName
     .split(' ')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
@@ -176,17 +180,17 @@ function previewMessage() {
       .replaceAll('{{partner_text}}', partnerText);
   }
 
-  const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-  currentData = { displayName, phoneNumber, isPartner, whatsappURL, message };
+  const whatsappURL = `https://wa.me/${finalPhoneNumber}?text=${encodeURIComponent(message)}`;
+  currentData = { displayName, phoneNumber: finalPhoneNumber, isPartner, whatsappURL, message };
 
-  // tampilkan di preview box
   const previewBox = document.getElementById('previewBox');
-  previewBox.textContent = message;
+  previewBox.innerHTML = message.replace(/\n/g, '<br>');
   previewBox.style.display = "block";
 
   document.getElementById('confirmButton').style.display = "block";
   document.getElementById('clearPreviewButton').style.display = "block";
 }
+
 
 // === 🔹 Clear Preview ===
 function clearPreview() {
