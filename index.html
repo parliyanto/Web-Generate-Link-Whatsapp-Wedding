@@ -1,327 +1,202 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generate WhatsApp Invitation (Bekasi)</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!DOCTYPE html>
+  <html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <title>WhatsApp Invitation Generator</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      background-color: #f0f8ff;
-      margin: 0;
-      padding: 30px;
-    }
-    .container {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 700px;
-    }
-    h1 { text-align: center; color: #333; }
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background:#eef3ff;
+        margin:0;
+        padding:20px;
+        display:flex;
+        justify-content:center;
+      }
+      .container {
+        background:white;
+        width:100%;
+        max-width:900px;
+        padding:20px;
+        border-radius:10px;
+        box-shadow:0 4px 10px rgba(0,0,0,0.1);
+      }
 
-    input, select, button {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      font-size: 15px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background-color: #25D366;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-    }
-    button:hover { background-color: #128C7E; }
+      /* TAB MENU */
+      .tabs {
+        display:flex;
+        gap:10px;
+        margin-bottom:20px;
+      }
+      .tab {
+        padding:10px 20px;
+        background:#ddd;
+        cursor:pointer;
+        border-radius:5px;
+        font-weight:bold;
+      }
+      .tab.active {
+        background:#4287f5;
+        color:white;
+      }
 
-    .delete-button {
-      background-color: #dc3545;
-      padding: 8px 14px;
-      width: auto;
-      color: white;
-      font-weight: bold;
-      border-radius: 4px;
-    }
+      .page {
+        display:none;
+      }
+      .page.active {
+        display:block;
+      }
+      /* ============================
+    GLOBAL ELEMENT STYLE
+  ============================ */
+  input, select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
 
-    #excelLoading {
-      display:none;
-      font-weight:bold;
-      color:#444;
-      padding:10px 0;
-    }
-  </style>
-</head>
+  button {
+    cursor: pointer;
+  }
 
-<body>
-<div class="container">
-  <h1>Generate WhatsApp Invitation (Bekasi)</h1>
+  /* ============================
+    TABLE STYLE
+  ============================ */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 14px;
+  }
 
-  <label>Impor Data Excel (Kolom: Nama, Nomor)</label>
-  <input type="file" id="excelFile" accept=".xlsx,.xls">
+  th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+  }
 
-  <div id="excelLoading">⏳ Sedang memproses data Excel...</div>
+  th {
+    background: #f0f0f0;
+    font-weight: bold;
+  }
 
-  <p>Create Manual</p>
+  /* ============================
+    BUTTON STYLE
+  ============================ */
+  .preview-btn {
+    background: #3ba55d;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+  }
 
-  <label>Nama Tamu:</label>
-  <input type="text" id="guestName">
+  .preview-btn:hover {
+    background: #2f8c4d;
+  }
 
-  <label>Nomor WhatsApp:</label>
-  <input type="text" id="phoneNumber">
+  .delete-button {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+  }
 
-  <label>Apakah datang dengan pasangan?</label>
-  <select id="isPartner">
-    <option value="false">Tidak</option>
-    <option value="true">Ya</option>
-  </select>
+  .delete-button:hover {
+    background: #b52a37;
+  }
 
-  <button id="previewButton">Preview Pesan</button>
-  <button id="confirmButton" style="display:none;">Konfirmasi & Generate</button>
-  <button id="clearPreviewButton" style="display:none;background:#dc3545;">Clear Preview</button>
+  /* ============================
+    PREVIEW ROW STYLE
+  ============================ */
+  .preview-row td {
+    background: #fafafa;
+    padding: 15px;
+  }
 
-  <div class="preview" id="previewBox" style="display:none;"></div>
+  .preview-link {
+    background: #25D366;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+  }
 
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;">
-    <h2 style="margin:0;">Log Undangan WhatsApp</h2>
-    
-    <div style="display:flex;align-items:center;gap:15px;">
-        <span id="totalCount" style="font-weight:bold;color:#333;">Total: 0</span>
-        <button id="deleteLogsButton" class="delete-button">🗑 Hapus Semua</button>
+  .preview-link:hover {
+    background: #1ea955;
+  }
+
+  .close-preview {
+    background: #dc3545;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+  }
+
+  .close-preview:hover {
+    background: #b52a37;
+  }
+
+    </style>
+  </head>
+
+  <body>
+  <div class="container">
+
+    <h1 style="text-align:center;margin-top:0;">
+      WhatsApp Invitation Generator
+    </h1>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div id="tabBekasi" class="tab active">Bekasi</div>
+      <div id="tabJakarta" class="tab">Jakarta</div>
     </div>
-</div>
 
+    <!-- BEKASI PAGE -->
+    <div id="pageBekasi" class="page active">
+      <h2>Wedding Bekasi</h2>
+      <div id="bekasiContainer"></div>
+    </div>
 
-  <table border="1" width="100%" cellspacing="0" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Nama</th>
-        <th>Nomor</th>
-        <th>Pasangan</th>
-        <th>Aksi</th>
-      </tr>
-    </thead>
-    <tbody id="logBody"></tbody>
-  </table>
-</div>
+    <!-- JAKARTA PAGE -->
+    <div id="pageJakarta" class="page">
+      <h2>Wedding Jakarta</h2>
+      <div id="jakartaContainer"></div>
+    </div>
 
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  </div>
 
-const supabase = createClient(
-  "https://njdnhhbjdhtqaylhrxzv.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qZG5oaGJqZGh0cWF5bGhyeHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3NjM5NzMsImV4cCI6MjA3NjMzOTk3M30.PnlGDPgr7fCEmEDJrYac9mLM5_9GkRJp_6nxQ4C61tU"
-);
+  <!-- SCRIPT PAGE SWITCH -->
+  <script>
+  document.getElementById("tabBekasi").onclick = () => {
+    document.getElementById("pageBekasi").classList.add("active");
+    document.getElementById("pageJakarta").classList.remove("active");
 
-const defaultLink = "https://wedding-asrief.vercel.app/";
-
-/* ==========================
-   FIX NOMOR HP
-========================== */
-function fixPhoneNumber(num) {
-  if (typeof num === "number") return num.toFixed(0);
-  return String(num || "").replace(/\D/g, "");
-}
-
-/* ==========================
-   GENERATE PESAN
-========================== */
-function generateMessage(name, partner = false) {
-  const partnerText = partner ? "Bapak/Ibu/Saudara/i berdua" : "Bapak/Ibu/Saudara/i";
-  const fullLink = `${defaultLink}?guest_name=${encodeURIComponent(name)}`;
-
-return `Assalamu'alaikum Wr. Wb
-
-Yth. ${name},
-
-Tanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText} untuk menghadiri acara pernikahan:
-
-Asri Cikita Putri, S.Ds & Arief Rachman Nugraha, S.T
-
-Hari: Minggu, 7 Desember 2025
-Akad: 07.30 – 09.00 WIB
-Resepsi: 11.00 – 13.00 WIB
-
-Lokasi:
-ARRODA Function Hall Darussalam
-Jl. Cikunir Raya No 2A, Jakamulya, Bekasi
-
-Link undangan:
-${fullLink}
-
-Merupakan kebahagiaan bagi kami apabila ${partnerText} berkenan hadir.
-Terima kasih.
-
-Asri & Arief.`}
-
-/* ==========================
-   PREVIEW MANUAL
-========================== */
-let currentData = {};
-
-previewButton.addEventListener("click", () => {
-  const name = guestName.value.trim();
-  const phone = phoneNumber.value.trim();
-  const partner = isPartner.value === "true";
-
-  if (!name || !phone) return alert("Isi nama & nomor.");
-
-  const msg = generateMessage(name, partner);
-
-  currentData = {
-    name,
-    phone,
-    partner,
-    link: `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+    document.getElementById("tabBekasi").classList.add("active");
+    document.getElementById("tabJakarta").classList.remove("active");
   };
 
-  previewBox.innerHTML = msg.replace(/\n/g, "<br>");
-  previewBox.style.display = "block";
-  confirmButton.style.display = "block";
-  clearPreviewButton.style.display = "block";
-});
+  document.getElementById("tabJakarta").onclick = () => {
+    document.getElementById("pageJakarta").classList.add("active");
+    document.getElementById("pageBekasi").classList.remove("active");
 
-clearPreviewButton.addEventListener("click", () => {
-  previewBox.style.display = "none";
-  confirmButton.style.display = "none";
-  clearPreviewButton.style.display = "none";
-});
+    document.getElementById("tabJakarta").classList.add("active");
+    document.getElementById("tabBekasi").classList.remove("active");
+  };
+  </script>
 
-/* ==========================
-   SIMPAN MANUAL
-========================== */
-confirmButton.addEventListener("click", async () => {
-  await supabase.from("whatsapp_invites").insert([{
-    guest_name: currentData.name,
-    phone_number: currentData.phone,
-    partner: currentData.partner,
-    message_link: currentData.link
-  }]);
-  alert("Berhasil disimpan!");
-  updateLogTable();
-});
-
-/* ==========================
-   IMPORT EXCEL
-========================== */
-excelFile.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  excelLoading.style.display = "block";
-
-  const buffer = await file.arrayBuffer();
-  const sheet = XLSX.read(buffer).Sheets[XLSX.read(buffer).SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet);
-
-  for (const r of rows) {
-    const name = (r.Nama || "").trim();
-    const phone = fixPhoneNumber(r.Nomor);
-    if (!name || !phone) continue;
-
-    const msg = generateMessage(name, false);
-    const link = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-
-    await supabase.from("whatsapp_invites").insert([
-      { guest_name: name, phone_number: phone, partner: false, message_link: link }
-    ]);
-  }
-
-  excelLoading.style.display = "none";
-  await updateLogTable();
-});
-
-/* ==========================
-   TAMPILKAN DATA TABEL
-========================== */
-async function updateLogTable() {
-  const { data } = await supabase
-    .from("whatsapp_invites")
-    .select("*")
-    .order("id", { ascending: true });
-
-  const body = logBody;
-  body.innerHTML = "";
-
-  document.getElementById("totalCount").innerText = `Total: ${data.length}`;
+  <script type="module" src="bekasi.js"></script>
+  <script type="module" src="jakarta.js"></script>
 
 
-  if (!data || data.length === 0) {
-    body.innerHTML = `<tr><td colspan="4" align="center">Belum ada data</td></tr>`;
-    return;
-  }
-
-  data.forEach((row, index) => {
-    const encoded = btoa(row.message_link); // penting!
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${row.guest_name}</td>
-      <td>${row.phone_number}</td>
-      <td>${row.partner ? "Ya" : "Tidak"}</td>
-      <td>
-        <button onclick="previewLog('${encoded}', ${index})">👁 Preview</button>
-      </td>
-    `;
-    body.appendChild(tr);
-  });
-}
-
-/* ==========================
-   PREVIEW INLINE PER-ROW
-========================== */
-window.previewLog = function(encodedLink, index) {
-  const link = atob(encodedLink);  // decode btoa
-  const message = decodeURIComponent(link.split("?text=")[1]);
-
-  const table = logBody;
-  document.querySelectorAll(".preview-row").forEach(el => el.remove());
-
-  const originalRow = table.children[index];
-
-  const previewRow = document.createElement("tr");
-  previewRow.className = "preview-row";
-
-  previewRow.innerHTML = `
-    <td colspan="4" style="background:#fafafa;padding:15px;">
-      <div style="white-space:pre-line;">${message}</div>
-
-      <div style="display:flex;gap:10px;margin-top:10px;">
-        <a href="${link}" target="_blank"
-           style="background:#25D366;color:white;padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:bold;">
-           📤 Kirim WA
-        </a>
-
-        <button onclick="this.closest('tr').remove()"
-          style="background:#dc3545;color:white;padding:8px 14px;border-radius:6px;font-weight:bold;border:none;">
-          ✖ Tutup
-        </button>
-      </div>
-    </td>
-  `;
-
-  originalRow.after(previewRow);
-};
-
-/* ==========================
-   DELETE ALL
-========================== */
-deleteLogsButton.addEventListener("click", async () => {
-  if (!confirm("Hapus semua data?")) return;
-  await supabase.from("whatsapp_invites").delete().neq("id", 0);
-  updateLogTable();
-});
-
-window.onload = updateLogTable;
-</script>
-
-</body>
-</html>
+  </body>
+  </html>
