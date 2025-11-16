@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generate WhatsApp Invitation + Import Excel</title>
+  <title>Generate WhatsApp Invitation (Bekasi)</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -21,10 +22,11 @@
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       width: 100%;
-      max-width: 650px;
+      max-width: 700px;
     }
     h1 { text-align: center; color: #333; }
-    input, select, textarea, button {
+
+    input, select, button {
       width: 100%;
       padding: 12px;
       margin-bottom: 15px;
@@ -39,324 +41,287 @@
       cursor: pointer;
       border: none;
     }
-    .preview {
-        margin-top: 20px;
-        padding: 10px;
-        background-color: #f7f7f7;
-        border-radius: 6px;
-        font-size: 14px;
-        color: #333;
-        white-space: pre-line; /* ✅ Jaga format baris dan enter tetap tampil */
-        line-height: 1.6; /* ✅ Biar antarbaris lebih lega */
-        }
     button:hover { background-color: #128C7E; }
-    .action-btn {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      margin-right: 4px;
-    }
-    .action-btn:hover { background-color: #0056b3; }
+
     .delete-button {
       background-color: #dc3545;
-      width: auto;
       padding: 8px 14px;
-      font-size: 14px;
-      float: right;
+      width: auto;
+      color: white;
+      font-weight: bold;
+      border-radius: 4px;
     }
-    .delete-button:hover { background-color: #b02a37; }
-    .message-preview-box {
-      display: none;
-      margin-top: 15px;
-      padding: 12px;
-      background-color: #f7f7f7;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      white-space: pre-line;
+
+    #excelLoading {
+      display:none;
+      font-weight:bold;
+      color:#444;
+      padding:10px 0;
     }
   </style>
 </head>
+
 <body>
 <div class="container">
-  <h1>Generate WhatsApp Invitation</h1>
+  <h1>Generate WhatsApp Invitation (Bekasi)</h1>
 
-  <!-- 🔹 Upload Excel -->
-  <label for="excelFile">Impor Data Excel (Kolom: Nama, Nomor)</label>
-  <input type="file" id="excelFile" accept=".xlsx,.xls" />
+  <label>Impor Data Excel (Kolom: Nama, Nomor)</label>
+  <input type="file" id="excelFile" accept=".xlsx,.xls">
 
-  <label for="guestName">Nama Tamu:</label>
-  <input type="text" id="guestName" placeholder="Masukkan nama tamu" />
+  <div id="excelLoading">⏳ Sedang memproses data Excel...</div>
 
-  <label for="phoneNumber">Nomor WhatsApp (diawali 62):</label>
-  <input type="text" id="phoneNumber" placeholder="Masukkan nomor tujuan" />
+  <p>Create Manual</p>
 
-  <label for="isPartner">Apakah datang bersama pasangan?</label>
+  <label>Nama Tamu:</label>
+  <input type="text" id="guestName">
+
+  <label>Nomor WhatsApp:</label>
+  <input type="text" id="phoneNumber">
+
+  <label>Apakah datang dengan pasangan?</label>
   <select id="isPartner">
     <option value="false">Tidak</option>
     <option value="true">Ya</option>
   </select>
 
-  <label for="customLink">URL Undangan (Opsional):</label>
-  <input type="text" id="customLink" placeholder="Masukkan link custom atau biarkan kosong" />
-
-  <label for="customMessage">Teks Undangan (opsional, gunakan {{guest_name}}, {{link}}, {{partner_text}}):</label>
-  <textarea id="customMessage" rows="7" placeholder="Kosongkan untuk teks default"></textarea>
-
   <button id="previewButton">Preview Pesan</button>
   <button id="confirmButton" style="display:none;">Konfirmasi & Generate</button>
-  <button id="clearPreviewButton" style="display:none;background-color:#dc3545;">Clear Preview</button>
+  <button id="clearPreviewButton" style="display:none;background:#dc3545;">Clear Preview</button>
 
   <div class="preview" id="previewBox" style="display:none;"></div>
 
-  <div style="display:flex;justify-content:space-between;align-items:center;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;">
     <h2 style="margin:0;">Log Undangan WhatsApp</h2>
-    <button id="deleteLogsButton" class="delete-button">🗑 Hapus Semua Log</button>
-  </div>
+    
+    <div style="display:flex;align-items:center;gap:15px;">
+        <span id="totalCount" style="font-weight:bold;color:#333;">Total: 0</span>
+        <button id="deleteLogsButton" class="delete-button">🗑 Hapus Semua</button>
+    </div>
+</div>
 
-  <table class="log-table" id="logTable" border="1" width="100%" cellspacing="0" cellpadding="6">
+
+  <table border="1" width="100%" cellspacing="0" cellpadding="6">
     <thead>
       <tr>
-        <th>Nama Tamu</th>
-        <th>Nomor WhatsApp</th>
+        <th>Nama</th>
+        <th>Nomor</th>
         <th>Pasangan</th>
         <th>Aksi</th>
       </tr>
     </thead>
     <tbody id="logBody"></tbody>
   </table>
-
-  <div id="messagePreviewBox" class="message-preview-box"></div>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-import 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 
 const supabase = createClient(
-  'https://njdnhhbjdhtqaylhrxzv.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qZG5oaGJqZGh0cWF5bGhyeHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3NjM5NzMsImV4cCI6MjA3NjMzOTk3M30.PnlGDPgr7fCEmEDJrYac9mLM5_9GkRJp_6nxQ4C61tU'
+  "https://njdnhhbjdhtqaylhrxzv.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qZG5oaGJqZGh0cWF5bGhyeHp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3NjM5NzMsImV4cCI6MjA3NjMzOTk3M30.PnlGDPgr7fCEmEDJrYac9mLM5_9GkRJp_6nxQ4C61tU"
 );
 
-const defaultLink = 'https://weddingbridepakarif.vercel.app';
+const defaultLink = "https://wedding-asrief.vercel.app/";
+
+/* ==========================
+   FIX NOMOR HP
+========================== */
+function fixPhoneNumber(num) {
+  if (typeof num === "number") return num.toFixed(0);
+  return String(num || "").replace(/\D/g, "");
+}
+
+/* ==========================
+   GENERATE PESAN
+========================== */
+function generateMessage(name, partner = false) {
+  const partnerText = partner ? "Bapak/Ibu/Saudara/i berdua" : "Bapak/Ibu/Saudara/i";
+  const fullLink = `${defaultLink}?guest_name=${encodeURIComponent(name)}`;
+
+return `Assalamu'alaikum Wr. Wb
+
+Yth. ${name},
+
+Tanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText} untuk menghadiri acara pernikahan:
+
+Asri Cikita Putri, S.Ds & Arief Rachman Nugraha, S.T
+
+Hari: Minggu, 7 Desember 2025
+Akad: 07.30 – 09.00 WIB
+Resepsi: 11.00 – 13.00 WIB
+
+Lokasi:
+ARRODA Function Hall Darussalam
+Jl. Cikunir Raya No 2A, Jakamulya, Bekasi
+
+Link undangan:
+${fullLink}
+
+Merupakan kebahagiaan bagi kami apabila ${partnerText} berkenan hadir.
+Terima kasih.
+
+Asri & Arief.`}
+
+/* ==========================
+   PREVIEW MANUAL
+========================== */
 let currentData = {};
 
-// === 🔹 Fungsi Preview Pesan ===
-function previewMessage() {
-  const guestName = document.getElementById('guestName').value.trim();
-  const phoneNumber = document.getElementById('phoneNumber').value.trim();
-  const isPartner = document.getElementById('isPartner').value === "true";
-  const customLink = document.getElementById('customLink').value.trim() || defaultLink;
-  const customMessage = document.getElementById('customMessage').value.trim();
+previewButton.addEventListener("click", () => {
+  const name = guestName.value.trim();
+  const phone = phoneNumber.value.trim();
+  const partner = isPartner.value === "true";
 
-  // 🧠 Kalau tidak pakai custom message → wajib isi nama & nomor
-  if (customMessage === "" && (!guestName || !phoneNumber)) {
-    alert('❌ Mohon masukkan nama tamu dan nomor WhatsApp.');
-    return;
-  }
+  if (!name || !phone) return alert("Isi nama & nomor.");
 
-  // kalau custom message, isi default kalau field kosong
-  const finalGuestName = guestName || "{{guest_name}}";
-  const finalPhoneNumber = phoneNumber || "0000000000000"; // dummy biar ga error
-  const formattedName = finalGuestName
-    .split(' ')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-  const displayName = isPartner ? `${formattedName} & Partner` : formattedName;
-  const partnerText = isPartner
-    ? 'Bapak/Ibu/Saudara/i berdua'
-    : 'Bapak/Ibu/Saudara/i';
-  const fullLink = `${customLink}?guest_name=${encodeURIComponent(displayName)}`;
+  const msg = generateMessage(name, partner);
 
-  let message = `Kepada Yth.\nBapak/Ibu/Saudara/i\n${displayName}\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText} untuk menghadiri acara pernikahan kami.\n\nBerikut link undangan kami:\n${fullLink}\n\nMerupakan suatu kebahagiaan bagi kami apabila ${partnerText} berkenan hadir dan memberikan doa restu.\n\nTerima kasih,\nHormat kami,\nAsri & Arief`;
+  currentData = {
+    name,
+    phone,
+    partner,
+    link: `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+  };
 
-  if (customMessage !== "") {
-    message = customMessage
-      .replaceAll('{{guest_name}}', displayName)
-      .replaceAll('{{link}}', fullLink)
-      .replaceAll('{{partner_text}}', partnerText);
-  }
-
-  const whatsappURL = `https://wa.me/${finalPhoneNumber}?text=${encodeURIComponent(message)}`;
-  currentData = { displayName, phoneNumber: finalPhoneNumber, isPartner, whatsappURL, message };
-
-  const previewBox = document.getElementById('previewBox');
-  previewBox.innerHTML = message.replace(/\n/g, '<br>');
+  previewBox.innerHTML = msg.replace(/\n/g, "<br>");
   previewBox.style.display = "block";
+  confirmButton.style.display = "block";
+  clearPreviewButton.style.display = "block";
+});
 
-  document.getElementById('confirmButton').style.display = "block";
-  document.getElementById('clearPreviewButton').style.display = "block";
-}
+clearPreviewButton.addEventListener("click", () => {
+  previewBox.style.display = "none";
+  confirmButton.style.display = "none";
+  clearPreviewButton.style.display = "none";
+});
 
+/* ==========================
+   SIMPAN MANUAL
+========================== */
+confirmButton.addEventListener("click", async () => {
+  await supabase.from("whatsapp_invites").insert([{
+    guest_name: currentData.name,
+    phone_number: currentData.phone,
+    partner: currentData.partner,
+    message_link: currentData.link
+  }]);
+  alert("Berhasil disimpan!");
+  updateLogTable();
+});
 
-// === 🔹 Clear Preview ===
-function clearPreview() {
-  document.getElementById('previewBox').style.display = "none";
-  document.getElementById('confirmButton').style.display = "none";
-  document.getElementById('clearPreviewButton').style.display = "none";
-  currentData = {};
-}
-
-// === 🔹 Simpan ke Supabase setelah Konfirmasi ===
-async function confirmGenerate() {
-  const { displayName, phoneNumber, isPartner, whatsappURL } = currentData;
-  if (!displayName) {
-    alert('⚠️ Belum ada data untuk disimpan. Klik Preview dulu.');
-    return;
-  }
-
-  const { error } = await supabase.from('whatsapp_invites').insert([
-    {
-      guest_name: displayName,
-      phone_number: phoneNumber,
-      partner: isPartner,
-      message_link: whatsappURL
-    }
-  ]);
-
-  if (error) {
-    console.error(error);
-    alert('❌ Gagal menyimpan data.');
-  } else {
-    alert('✅ Link WhatsApp berhasil dibuat!');
-    clearPreview();
-    updateLogTable();
-  }
-}
-
-// === 🔹 Import Excel Otomatis ===
-document.getElementById('excelFile').addEventListener('change', async (e) => {
+/* ==========================
+   IMPORT EXCEL
+========================== */
+excelFile.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  excelLoading.style.display = "block";
+
+  const buffer = await file.arrayBuffer();
+  const sheet = XLSX.read(buffer).Sheets[XLSX.read(buffer).SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet);
 
-  if (!rows.length) {
-    alert('❌ File kosong atau format tidak sesuai. Gunakan kolom: Nama, Nomor, (opsional: Pasangan)');
-    return;
-  }
-
-  let inserted = 0;
   for (const r of rows) {
-    const guestName = (r.Nama || '').toString().trim();
-    const phoneNumber = (r.Nomor || '').toString().replace(/\D/g, '');
-    const isPartner = r.Pasangan?.toString().toLowerCase() === 'ya';
-    if (!guestName || !phoneNumber) continue;
+    const name = (r.Nama || "").trim();
+    const phone = fixPhoneNumber(r.Nomor);
+    if (!name || !phone) continue;
 
-    const formattedName = guestName
-      .split(' ')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
-    const displayName = isPartner ? `${formattedName} & Partner` : formattedName;
-    const partnerText = isPartner
-      ? 'Bapak/Ibu/Saudara/i berdua'
-      : 'Bapak/Ibu/Saudara/i';
-    const fullLink = `${defaultLink}?guest_name=${encodeURIComponent(displayName)}`;
+    const msg = generateMessage(name, false);
+    const link = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
-    const message = `Kepada Yth.\nBapak/Ibu/Saudara/i\n${displayName}\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText} untuk menghadiri acara pernikahan kami.\n\nBerikut link undangan kami:\n${fullLink}\n\nMerupakan suatu kebahagiaan bagi kami apabila ${partnerText} berkenan hadir dan memberikan doa restu.\n\nTerima kasih,\nHormat kami,\nAsri & Arief`;
-
-    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    const { error } = await supabase.from('whatsapp_invites').insert([
-      {
-        guest_name: displayName,
-        phone_number: phoneNumber,
-        partner: isPartner,
-        message_link: whatsappURL
-      }
+    await supabase.from("whatsapp_invites").insert([
+      { guest_name: name, phone_number: phone, partner: false, message_link: link }
     ]);
-    if (!error) inserted++;
   }
 
-  alert(`✅ Berhasil membuat ${inserted} undangan dari Excel!`);
-  updateLogTable();
+  excelLoading.style.display = "none";
+  await updateLogTable();
 });
 
-// === 🔹 Decode pesan dari link ===
-function decodeMessageFromLink(link) {
-  const textParam = link.split('?text=')[1];
-  return textParam ? decodeURIComponent(textParam) : '(Tidak ada pesan)';
-}
-
-// === 🔹 Update Tabel Log ===
+/* ==========================
+   TAMPILKAN DATA TABEL
+========================== */
 async function updateLogTable() {
-  const { data, error } = await supabase
-    .from('whatsapp_invites')
-    .select('*')
-    .order('id', { ascending: false });
+  const { data } = await supabase
+    .from("whatsapp_invites")
+    .select("*")
+    .order("id", { ascending: true });
 
-  if (error) return console.error(error);
+  const body = logBody;
+  body.innerHTML = "";
 
-  const body = document.getElementById('logBody');
-  body.innerHTML = '';
+  document.getElementById("totalCount").innerText = `Total: ${data.length}`;
 
-  if (!data.length) {
-    body.innerHTML = `<tr><td colspan="4" align="center">Belum ada log undangan.</td></tr>`;
+
+  if (!data || data.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" align="center">Belum ada data</td></tr>`;
     return;
   }
 
-  data.forEach((log) => {
-    const tr = document.createElement('tr');
+  data.forEach((row, index) => {
+    const encoded = btoa(row.message_link); // penting!
+
+    const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${log.guest_name}</td>
-      <td>${log.phone_number}</td>
-      <td>${log.partner ? 'Ya' : 'Tidak'}</td>
+      <td>${row.guest_name}</td>
+      <td>${row.phone_number}</td>
+      <td>${row.partner ? "Ya" : "Tidak"}</td>
       <td>
-        <button class="action-btn preview-btn" data-link="${log.message_link}">👁 Preview</button>
-        <a href="${log.message_link}" target="_blank" class="action-btn" style="background:#25D366;">📤 WhatsApp</a>
-      </td>`;
+        <button onclick="previewLog('${encoded}', ${index})">👁 Preview</button>
+      </td>
+    `;
     body.appendChild(tr);
   });
-
-  document.querySelectorAll('.preview-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      const link = e.target.getAttribute('data-link');
-      previewLogMessage(link);
-    });
-  });
 }
 
-// === 🔹 Preview pesan log ===
-function previewLogMessage(link) {
-  const box = document.getElementById('messagePreviewBox');
-  box.innerHTML =
-    decodeMessageFromLink(link) +
-    `<br><br><button class="action-btn" onclick="document.getElementById('messagePreviewBox').style.display='none'">Tutup</button>`;
-  box.style.display = 'block';
-}
+/* ==========================
+   PREVIEW INLINE PER-ROW
+========================== */
+window.previewLog = function(encodedLink, index) {
+  const link = atob(encodedLink);  // decode btoa
+  const message = decodeURIComponent(link.split("?text=")[1]);
 
-// === 🔹 Hapus semua log ===
-async function deleteAllLogs() {
-  if (!confirm('⚠️ Yakin ingin menghapus semua log undangan?')) return;
-  const { error } = await supabase.from('whatsapp_invites').delete().neq('id', 0);
-  if (error) return alert('❌ Gagal menghapus log: ' + error.message);
-  alert('🗑 Semua log berhasil dihapus!');
+  const table = logBody;
+  document.querySelectorAll(".preview-row").forEach(el => el.remove());
+
+  const originalRow = table.children[index];
+
+  const previewRow = document.createElement("tr");
+  previewRow.className = "preview-row";
+
+  previewRow.innerHTML = `
+    <td colspan="4" style="background:#fafafa;padding:15px;">
+      <div style="white-space:pre-line;">${message}</div>
+
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <a href="${link}" target="_blank"
+           style="background:#25D366;color:white;padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:bold;">
+           📤 Kirim WA
+        </a>
+
+        <button onclick="this.closest('tr').remove()"
+          style="background:#dc3545;color:white;padding:8px 14px;border-radius:6px;font-weight:bold;border:none;">
+          ✖ Tutup
+        </button>
+      </div>
+    </td>
+  `;
+
+  originalRow.after(previewRow);
+};
+
+/* ==========================
+   DELETE ALL
+========================== */
+deleteLogsButton.addEventListener("click", async () => {
+  if (!confirm("Hapus semua data?")) return;
+  await supabase.from("whatsapp_invites").delete().neq("id", 0);
   updateLogTable();
-}
-
-// === 🔹 Disable field atas ketika customMessage diisi ===
-const customMsgField = document.getElementById('customMessage');
-customMsgField.addEventListener('input', () => {
-  const isCustomFilled = customMsgField.value.trim() !== "";
-  const fields = ['guestName', 'phoneNumber', 'isPartner', 'customLink', 'excelFile'];
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = isCustomFilled;
-  });
 });
-
-// === 🔹 Event listener tombol ===
-document.getElementById('previewButton').addEventListener('click', previewMessage);
-document.getElementById('confirmButton').addEventListener('click', confirmGenerate);
-document.getElementById('clearPreviewButton').addEventListener('click', clearPreview);
-document.getElementById('deleteLogsButton').addEventListener('click', deleteAllLogs);
 
 window.onload = updateLogTable;
 </script>
+
 </body>
 </html>
