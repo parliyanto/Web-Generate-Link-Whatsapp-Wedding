@@ -99,7 +99,7 @@ Berikut link undangan kami untuk info lengkap dari acara bisa kunjungi :
 ${JKT_LINK}?guest_name=${encodeURIComponent(name)}
 
 Merupakan suatu kebahagiaan bagi kami apabila ${partnerText} berkenan untuk hadir dan memberikan doa restu.
-Atas perhatiannya, kami ucapkan terimakasih.
+Atas perhatiannya, kami ucapkan terima kasih.
 
 Arief & Asri.
 Kel. Madih S.Sos & Suminar S.Pd.

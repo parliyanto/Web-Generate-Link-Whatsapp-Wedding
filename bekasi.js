@@ -97,7 +97,7 @@ Link undangan:
 ${BEKASI_LINK}?guest_name=${encodeURIComponent(name)}
 
 Merupakan suatu kebahagiaan bagi kami apabila ${partnerText} berkenan untuk hadir dan memberikan doa restu.
-Atas perhatiannya, kami ucapkan terimakasih.
+Atas perhatiannya, kami ucapkan terima kasih.
 
 Asri & Arief.
 Kel.Drs Agus Milad Jamal & Drg.Rita Febriyanti.
