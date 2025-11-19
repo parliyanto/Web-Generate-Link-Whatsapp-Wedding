@@ -10,7 +10,7 @@ const supabase = createClient(
 );
 
 const JKT_TABLE = "whatsapp_invites_jakarta";
-const JKT_LINK = "https://weddingbride-asrief.vercel.app/";
+const JKT_LINK = "https://postwedding-asrief.vercel.app/";
 
 /* ======================================================
    RENDER UI INTO JAKARTA TAB
