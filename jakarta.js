@@ -107,26 +107,40 @@ function initJakartaLogic() {
 
 
   /* ========== Generate Message ========== */
-  function generateMessage(name, isPartner) {
-    const p = isPartner ? "Bapak/Ibu/Saudara/i berdua" : "Bapak/Ibu/Saudara/i";
+  function generateMessage(name, partner) {
+    const partnerText = partner 
+    ? "Bapak/Ibu/Saudara/i berdua" 
+    : "Bapak/Ibu/Saudara/i";
+
+    // 🟦 Fix agar greeting juga ikut pasangan
+  const nameDisplay = partner
+    ? `${name} & Pasangan`
+    : name;
 
 return `Assalamu'alaikum Wr. Wb
 
-*Yth. ${name}*,
+*Yth. ${nameDisplay}*,
 
-Tanpa mengurangi rasa hormat, perkenankan kami mengundang ${p} untuk menghadiri acara pernikahan kami.
+Tanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText}, teman sekaligus sahabat, untuk menghadiri acara pernikahan putra/i kami :
 
 *Arief Rachman Nugraha, S.T & Asri Cikita Putri, S.Ds*
 
-Hari: Minggu, 14 Desember 2025
-Waktu: 11.00 – 16.00 WIB
+yang akan dilaksanakan pada:
+*Hari: Minggu, 14 Desember 2025*
+*Waktu Acara: 11.00 – 16.00 WIB*
+*Lokasi: PT Mustika Ratu Tbk — Head Office*
+Jl. Mustika Ratu No.2 7, RT.7/RW.8, Ciracas Jakarta Timur.
 
-Lokasi: PT Mustika Ratu Tbk — Head Office, Ciracas Jakarta Timur
+_Berikut ini kami kirimkan link undangan digital mengenai detail acara:_
+_${BASE_LINK}?guest_name=${encodeURIComponent(name)}_
 
-Link undangan:
-${BASE_LINK}?guest_name=${encodeURIComponent(name)}
+Merupakan suatu kebahagiaan bagi kami apabila ${partnerText} berkenan untuk hadir dan memberikan doa restu.
 
-Merupakan kebahagiaan besar bagi kami apabila ${p} berkenan hadir.
+Atas perhatiannya, kami ucapkan terima kasih.
+
+Arief & Asri
+Kel. Madih S.Sos & Suminar S.Pd.
+Kel. Drs. Agus Milad Jamal & Drg.Rita Febriyanti.
 `;
   }
 
@@ -145,7 +159,10 @@ Merupakan kebahagiaan besar bagi kami apabila ${p} berkenan hadir.
       message_link: link
     };
 
-    previewBox.innerHTML = msg.replace(/\*(.*?)\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+    previewBox.innerHTML = msg
+    .replace(/\*(.*?)\*/g, "<b>$1</b>")
+    .replace(/_(.*?)_/g, "<i>$1</i>")
+    .replace(/\n/g, "<br>");
     previewBox.style.display = "block";
     confirmBtn.style.display = "inline-block";
     clearBtn.style.display = "inline-block";
@@ -258,7 +275,11 @@ Merupakan kebahagiaan besar bagi kami apabila ${p} berkenan hadir.
   window.previewJakartaRow = (encoded, idx) => {
     const link = atob(encoded);
     const rawMsg = decodeURIComponent(link.split("?text=")[1]);
-    const htmlMsg = rawMsg.replace(/\*(.*?)\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+    const htmlMsg = rawMsg
+    .replace(/\*(.*?)\*/g, "<b>$1</b>")        // Bold
+    .replace(/_(.*?)_/g, "<i>$1</i>")          // Italic WA → HTML
+    .replace(/\n/g, "<br>");
+
 
     document.querySelectorAll(".preview-row").forEach(x => x.remove());
 
@@ -269,8 +290,8 @@ Merupakan kebahagiaan besar bagi kami apabila ${p} berkenan hadir.
     pr.innerHTML = `
       <td colspan="4">
         ${htmlMsg}
-        <div style="margin-top:10px; display:flex; gap:10px;">
-          <a href="${link}" target="_blank">📤 Kirim WA</a>
+        <div style="margin-top:10px; display:flex; gap:10px; border-top:1px solid #ccc; padding-top:10px;">
+          <button><a href="${link}" target="_blank">📤 Kirim WA</a></button>
           <button onclick="this.closest('tr').remove()">✖ Tutup</button>
         </div>
       </td>
