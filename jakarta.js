@@ -121,7 +121,7 @@ return `Assalamu'alaikum Wr. Wb
 
 *Yth. ${nameDisplay}*,
 
-Tanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText}, teman sekaligus sahabat, untuk menghadiri acara pernikahan putra/i kami :
+Tanpa mengurangi rasa hormat, perkenankan kami mengundang ${partnerText}, teman sekaligus sahabat, untuk menghadiri acara resepsi pernikahan putra/i kami :
 
 *Arief Rachman Nugraha, S.T & Asri Cikita Putri, S.Ds*
 
