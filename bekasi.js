@@ -2,7 +2,9 @@
    BEKASI PAGE — FULL UI + LOGIC (WITH CSS CLASSES)
 ====================================================== */
 
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.3?bundle&target=es2020";
+console.log("Bekasi page loaded");
+
 
 const supabase = createClient(
   "https://njdnhhbjdhtqaylhrxzv.supabase.co",
